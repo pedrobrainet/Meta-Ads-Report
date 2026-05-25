@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Ads Reporter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #141417;
+    --bg3: #1a1a1f;
+    --bg4: #222228;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f2;
+    --text2: #9090a0;
+    --text3: #5a5a6a;
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.12);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --accent: #6366f1;
+    --accent-dim: rgba(99,102,241,0.15);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    background: rgba(13,13,15,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: #fff; }
+  .header-badge {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* UPLOAD SCREEN */
+  #upload-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 56px);
+    padding: 2rem;
+  }
+  .upload-hero {
+    text-align: center;
+    max-width: 520px;
+  }
+  .upload-hero h1 {
+    font-size: 2.4rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fff 40%, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .upload-hero p {
+    color: var(--text2);
+    font-size: 15px;
+    margin-bottom: 2.5rem;
+  }
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg2);
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon {
+    width: 48px; height: 48px;
+    background: var(--bg4);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+  }
+  .drop-icon svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+  .drop-zone h3 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .drop-zone p { font-size: 13px; color: var(--text2); }
+  .formats {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .fmt-badge {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* REPORT SCREEN */
+  #report-screen { display: none; }
+
+  .report-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .report-title { font-size: 1.2rem; font-weight: 600; letter-spacing: -0.02em; }
+  .report-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg4); border-color: var(--accent); }
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover { opacity: 0.88; border-color: var(--accent); }
+
+  .report-body { padding: 2rem; max-width: 1200px; }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-sub { font-size: 11px; color: var(--text3); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.blue .kpi-value { color: var(--blue); }
+  .kpi-card.amber .kpi-value { color: var(--amber); }
+  .kpi-card.red .kpi-value { color: var(--red); }
+
+  /* CHARTS */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 720px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+  .chart-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 1rem;
+  }
+  .chart-wrap { position: relative; }
+
+  /* TABLE */
+  .table-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+  .table-head {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 16px;
+    color: var(--text3);
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+  td.name { color: var(--text); font-weight: 500; max-width: 220px; }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-right: 5px;
+    white-space: nowrap;
+  }
+  .tag-lead { background: var(--blue-dim); color: var(--blue); }
+  .tag-compra { background: var(--green-dim); color: var(--green); }
+  .tag-other { background: var(--bg4); color: var(--text3); }
+  .roas-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .roas-great { background: var(--green-dim); color: var(--green); }
+  .roas-good { background: var(--blue-dim); color: var(--blue); }
+  .roas-bad { background: var(--red-dim); color: var(--red); }
+  .roas-na { background: var(--bg4); color: var(--text3); }
+
+  /* INSIGHTS */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .insight-card {
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    border: 1px solid;
+  }
+  .insight-card.good { background: var(--green-dim); border-color: rgba(34,197,94,0.2); }
+  .insight-card.warn { background: var(--amber-dim); border-color: rgba(245,158,11,0.2); }
+  .insight-card.bad { background: var(--red-dim); border-color: rgba(239,68,68,0.2); }
+  .insight-card.info { background: var(--blue-dim); border-color: rgba(59,130,246,0.2); }
+  .insight-title { font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+  .insight-card.good .insight-title { color: var(--green); }
+  .insight-card.warn .insight-title { color: var(--amber); }
+  .insight-card.bad .insight-title { color: var(--red); }
+  .insight-card.info .insight-title { color: var(--blue); }
+  .insight-body { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ERROR */
+  .error-box {
+    background: var(--red-dim);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    color: var(--red);
+    font-size: 13px;
+    margin: 1rem 0;
+  }
+
+  /* LOADING */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 3rem;
+    color: var(--text2);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRINT */
+  @media print {
+    .header, .btn, #upload-screen { display: none !important; }
+    body { background: #fff; color: #000; }
+    .kpi-card, .chart-card, .table-card { border: 1px solid #ddd; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zm-11 11h7v7H3zm11 0h7v7h-7z"/></svg>
+    </div>
+    Meta Ads Reporter
+  </div>
+  <span class="header-badge">v1.0 · github pages ready</span>
+</header>
+
+<!-- UPLOAD SCREEN -->
+<div id="upload-screen">
+  <div class="upload-hero">
+    <h1>Relatório de campanhas em segundos</h1>
+    <p>Exporte seu CSV ou Excel direto do Meta Ads Manager e jogue aqui. O relatório completo é gerado automaticamente.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+        </svg>
+      </div>
+      <h3>Arraste o arquivo aqui</h3>
+      <p>ou clique para selecionar</p>
+    </div>
+
+    <div class="formats">
+      <span class="fmt-badge">.csv</span>
+      <span class="fmt-badge">.xlsx</span>
+      <span class="fmt-badge">.xls</span>
+    </div>
+
+    <div id="uploadError"></div>
+  </div>
+</div>
+
+<!-- REPORT SCREEN -->
+<div id="report-screen">
+  <div class="report-header">
+    <div>
+      <div class="report-title" id="reportTitle">—</div>
+      <div class="report-sub" id="reportSub">—</div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" onclick="window.print()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir
+      </button>
+      <button class="btn btn-accent" onclick="resetApp()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        Nova análise
+      </button>
+    </div>
+  </div>
+
+  <div class="report-body" id="reportBody">
+    <div class="loading"><div class="spinner"></div> Processando dados…</div>
+  </div>
+</div>
+
+<script>
+// ─── COLUMN MAP ────────────────────────────────────────────────────────────────
+// Maps known Meta Ads CSV column names to internal keys
+const COL = {
+  campaignName: ['Nome da campanha', 'Campaign name', 'Campaign Name'],
+  spend:        ['Valor usado (BRL)', 'Amount spent (BRL)', 'Amount Spent (BRL)', 'Valor gasto (BRL)'],
+  impressions:  ['Impressões', 'Impressions'],
+  reach:        ['Alcance', 'Reach'],
+  cpm:          ['CPM (custo por 1.000 impressões) (BRL)', 'CPM (cost per 1,000 impressions) (BRL)', 'CPM (BRL)'],
+  clicks:       ['Cliques no link', 'Link clicks', 'Link Clicks'],
+  ctr:          ['CTR (taxa de cliques no link)', 'CTR (link click-through rate)', 'CTR (Link Click-Through Rate)'],
+  cpc:          ['CPC (custo por clique no link) (BRL)', 'CPC (cost per link click) (BRL)'],
+  leads:        ['Leads'],
+  costPerLead:  ['Custo por lead (BRL)', 'Cost per lead (BRL)'],
+  purchases:    ['Compras', 'Purchases'],
+  purchaseValue:['Valor de conversão da compra', 'Purchase conversion value'],
+  costPerPurchase: ['Custo por compra (BRL)', 'Cost per purchase (BRL)'],
+  startDate:    ['Início dos relatórios', 'Reporting starts'],
+  endDate:      ['Encerramento dos relatórios', 'Reporting ends'],
+  frequency:    ['Frequência', 'Frequency'],
+};
+
+function resolveCol(headers, candidates) {
+  for (const c of candidates) {
+    const found = headers.find(h => h.trim().toLowerCase() === c.toLowerCase());
+    if (found) return found;
+  }
+  return null;
+}
+
+function n(val) {
+  if (val === null || val === undefined || val === '' || val === '—') return null;
+  const v = parseFloat(String(val).replace(',', '.'));
+  return isNaN(v) ? null : v;
+}
+
+function brl(val, decimals = 2) {
+  if (val === null || val === undefined) return '—';
+  return 'R$ ' + Number(val).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function fmt(val, suffix = '') {
+  if (val === null || val === undefined) return '—';
+  return Number(val).toLocaleString('pt-BR') + suffix;
+}
+
+// ─── FILE HANDLING ─────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('report-screen').style.display = 'block';
+  document.getElementById('reportTitle').textContent = file.name;
+
+  if (ext === 'csv') {
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: res => buildReport(res.data, file.name),
+      error: err => showError('Erro ao ler CSV: ' + err.message)
+    });
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        buildReport(data, file.name);
+      } catch (err) { showError('Erro ao ler Excel: ' + err.message); }
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    showError('Formato não suportado. Use .csv, .xlsx ou .xls exportado do Meta Ads Manager.');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('reportBody').innerHTML = `<div class="error-box">⚠ ${msg}</div><br><button class="btn" onclick="resetApp()">Tentar novamente</button>`;
+}
+
+function resetApp() {
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('report-screen').style.display = 'none';
+  document.getElementById('uploadError').innerHTML = '';
+  fileInput.value = '';
+  // destroy charts
+  Chart.helpers.each(Chart.instances, c => c.destroy());
+  document.getElementById('reportBody').innerHTML = '<div class="loading"><div class="spinner"></div> Processando dados…</div>';
+}
+
+// ─── REPORT BUILDER ────────────────────────────────────────────────────────────
+function buildReport(rawData, fileName) {
+  if (!rawData || rawData.length === 0) { showError('Arquivo vazio ou sem dados reconhecíveis.'); return; }
+
+  const headers = Object.keys(rawData[0]);
+  const cols = {};
+  for (const [key, candidates] of Object.entries(COL)) {
+    cols[key] = resolveCol(headers, candidates);
+  }
+
+  if (!cols.campaignName) { showError('Coluna "Nome da campanha" não encontrada. Verifique se o arquivo foi exportado corretamente do Meta Ads Manager.'); return; }
+
+  const campaigns = rawData.map(row => ({
+    name:            row[cols.campaignName] || '(sem nome)',
+    spend:           n(row[cols.spend]),
+    impressions:     n(row[cols.impressions]),
+    reach:           n(row[cols.reach]),
+    cpm:             n(row[cols.cpm]),
+    clicks:          n(row[cols.clicks]),
+    ctr:             n(row[cols.ctr]),
+    cpc:             n(row[cols.cpc]),
+    leads:           n(row[cols.leads]),
+    costPerLead:     n(row[cols.costPerLead]),
+    purchases:       n(row[cols.purchases]),
+    purchaseValue:   n(row[cols.purchaseValue]),
+    costPerPurchase: n(row[cols.costPerPurchase]),
+    startDate:       cols.startDate ? row[cols.startDate] : null,
+    endDate:         cols.endDate ? row[cols.endDate] : null,
+  })).filter(c => c.spend !== null || c.impressions !== null);
+
+  if (campaigns.length === 0) { showError('Nenhuma linha de campanha válida encontrada.'); return; }
+
+  // Totals
+  const sum = (key) => campaigns.reduce((a, c) => a + (c[key] || 0), 0);
+  const totalSpend       = sum('spend');
+  const totalImpressions = sum('impressions');
+  const totalReach       = sum('reach');
+  const totalClicks      = sum('clicks');
+  const totalLeads       = sum('leads');
+  const totalPurchases   = sum('purchases');
+  const totalPurchaseValue = sum('purchaseValue');
+  const avgCpm           = totalSpend && totalImpressions ? (totalSpend / totalImpressions * 1000) : null;
+  const avgCtr           = totalClicks && totalImpressions ? (totalClicks / totalImpressions * 100) : null;
+  const roas             = totalPurchaseValue && totalSpend ? totalPurchaseValue / totalSpend : null;
+  const avgCpp           = totalSpend && totalPurchases ? totalSpend / totalPurchases : null;
+
+  // Date range
+  const startDate = campaigns[0].startDate || '';
+  const endDate   = campaigns[0].endDate || '';
+  const dateRange = startDate && endDate ? `${startDate} → ${endDate}` : `${campaigns.length} campanhas`;
+
+  document.getElementById('reportSub').textContent = `${dateRange} · ${campaigns.length} campanhas`;
+
+  // Campaign type detection
+  const getType = name => {
+    const n = name.toUpperCase();
+    if (n.includes('LEAD')) return 'lead';
+    if (n.includes('COMPRA') || n.includes('PURCHASE')) return 'compra';
+    return 'other';
+  };
+
+  // Add computed fields
+  campaigns.forEach(c => {
+    c.type = getType(c.name);
+    c.roas = c.purchaseValue && c.spend ? c.purchaseValue / c.spend : null;
+    c.shortName = c.name.replace(/\[.*?\]\s*/g, '').replace(/CAPTAÇÃO\s*/i, '').trim().substring(0, 36);
+  });
+
+  // Sort by spend desc
+  const bySpend = [...campaigns].sort((a, b) => (b.spend || 0) - (a.spend || 0));
+  const byRoas  = [...campaigns].filter(c => c.roas).sort((a, b) => b.roas - a.roas);
+
+  // ── Insights ──
+  const bestRoas  = byRoas[0];
+  const worstCpp  = [...campaigns].filter(c => c.costPerPurchase).sort((a,b) => b.costPerPurchase - a.costPerPurchase)[0];
+  const bestVol   = [...campaigns].filter(c => c.purchases).sort((a,b) => (b.purchases||0)-(a.purchases||0))[0];
+
+  const insights = [];
+  if (roas) {
+    if (roas >= 5) insights.push({ type:'good', title:'ROAS excelente (' + roas.toFixed(2) + '×)', body:'Acima do benchmark de 3–4× no e-commerce. O investimento está retornando com boa margem.' });
+    else if (roas >= 3) insights.push({ type:'info', title:'ROAS satisfatório (' + roas.toFixed(2) + '×)', body:'Dentro do esperado. Há espaço para otimizar criativos e segmentação.' });
+    else insights.push({ type:'bad', title:'ROAS baixo (' + roas.toFixed(2) + '×)', body:'Abaixo do benchmark de 3×. Revisar públicos, criativos e funil de conversão.' });
+  }
+  if (bestRoas) insights.push({ type:'good', title:'Melhor campanha: ' + bestRoas.shortName, body:'ROAS de ' + bestRoas.roas.toFixed(2) + '× com R$ ' + (bestRoas.spend||0).toFixed(2).replace('.',',') + ' investidos. Considere escalar.' });
+  if (worstCpp) insights.push({ type:'warn', title:'Alto custo por compra', body:worstCpp.shortName + ' com R$ ' + (worstCpp.costPerPurchase||0).toFixed(2).replace('.',',') + '/compra. Avaliar pausa ou ajuste.' });
+  if (avgCtr) {
+    const ctrVal = parseFloat(avgCtr.toFixed(2));
+    if (ctrVal >= 1.5) insights.push({ type:'good', title:'CTR acima da média (' + ctrVal.toFixed(2) + '%)', body:'Acima do benchmark de 1,2% no Facebook. Criativos com boa aderência.' });
+    else if (ctrVal < 0.8) insights.push({ type:'bad', title:'CTR baixo (' + ctrVal.toFixed(2) + '%)', body:'Abaixo de 1%. Testar novos criativos ou revisar segmentação.' });
+  }
+
+  // ── HTML ──
+  const isDark = true;
+  const tc = 'rgba(255,255,255,0.4)';
+  const gc = 'rgba(255,255,255,0.05)';
+  const chartColors = ['#6366f1','#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899'];
+
+  document.getElementById('reportBody').innerHTML = `
+
+  <div class="section-label">Visão geral</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="section-label">Gráficos</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Gasto por campanha</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="spendChart" role="img" aria-label="Gasto por campanha"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ROAS por campanha</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="roasChart" role="img" aria-label="ROAS por campanha"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Gasto × receita</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="spendRevChart" role="img" aria-label="Gasto vs receita"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distribuição de impressões</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="impChart" role="img" aria-label="Impressões por campanha"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-label">Insights automáticos</div>
+  <div class="insights-grid" id="insightsGrid"></div>
+
+  <div class="section-label">Campanhas</div>
+  <div class="table-card">
+    <div class="table-head">Detalhamento por campanha — ordenado por gasto</div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Campanha</th>
+          <th>Gasto</th>
+          <th>Impressões</th>
+          <th>CPM</th>
+          <th>CTR</th>
+          <th>Cliques</th>
+          <th>Leads</th>
+          <th>Compras</th>
+          <th>Receita</th>
+          <th>Custo/compra</th>
+          <th>ROAS</th>
+        </tr>
+      </thead>
+      <tbody id="campaignTableBody"></tbody>
+    </table>
+    </div>
+  </div>
+  `;
+
+  // KPI cards
+  const kpis = [
+    { label: 'Gasto total', value: brl(totalSpend), sub: 'investimento', cls: '' },
+    { label: 'Impressões', value: fmt(Math.round(totalImpressions)), sub: 'total', cls: '' },
+    { label: 'Alcance', value: fmt(Math.round(totalReach)), sub: 'pessoas únicas', cls: '' },
+    { label: 'CPM médio', value: brl(avgCpm), sub: 'por 1.000 impressões', cls: '' },
+    { label: 'CTR médio', value: avgCtr ? avgCtr.toFixed(2) + '%' : '—', sub: 'taxa de cliques', cls: '' },
+    { label: 'Leads', value: fmt(totalLeads), sub: 'captados', cls: 'blue' },
+    { label: 'Compras', value: fmt(totalPurchases), sub: 'conversões', cls: 'green' },
+    { label: 'Receita est.', value: brl(totalPurchaseValue), sub: 'valor de conversão', cls: 'green' },
+    { label: 'ROAS', value: roas ? roas.toFixed(2) + '×' : '—', sub: 'retorno sobre invest.', cls: roas >= 5 ? 'green' : roas >= 3 ? 'blue' : 'red' },
+    { label: 'Custo/compra', value: brl(avgCpp), sub: 'média', cls: '' },
+  ];
+  const kpiGrid = document.getElementById('kpiGrid');
+  kpis.forEach(k => {
+    kpiGrid.innerHTML += `<div class="kpi-card ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-sub">${k.sub}</div></div>`;
+  });
+
+  // Insights
+  const ig = document.getElementById('insightsGrid');
+  insights.forEach(i => {
+    ig.innerHTML += `<div class="insight-card ${i.type}"><div class="insight-title">${i.title}</div><div class="insight-body">${i.body}</div></div>`;
+  });
+  if (insights.length === 0) ig.innerHTML = '<p style="color:var(--text3); font-size:13px;">Nenhum insight gerado com os dados disponíveis.</p>';
+
+  // Table
+  const tbody = document.getElementById('campaignTableBody');
+  bySpend.forEach(c => {
+    const roasCls = !c.roas ? 'roas-na' : c.roas >= 5 ? 'roas-great' : c.roas >= 3 ? 'roas-good' : 'roas-bad';
+    const roasTxt = c.roas ? c.roas.toFixed(2) + '×' : '—';
+    const typTag  = c.type === 'lead' ? 'tag-lead' : c.type === 'compra' ? 'tag-compra' : 'tag-other';
+    const typTxt  = c.type === 'lead' ? 'LEAD' : c.type === 'compra' ? 'COMPRA' : 'OUTRO';
+    tbody.innerHTML += `<tr>
+      <td class="name"><span class="tag ${typTag}">${typTxt}</span>${c.shortName}</td>
+      <td>${brl(c.spend)}</td>
+      <td>${fmt(c.impressions)}</td>
+      <td>${brl(c.cpm)}</td>
+      <td>${c.ctr ? c.ctr.toFixed(2)+'%' : '—'}</td>
+      <td>${fmt(c.clicks)}</td>
+      <td>${fmt(c.leads)}</td>
+      <td>${fmt(c.purchases)}</td>
+      <td>${brl(c.purchaseValue)}</td>
+      <td>${brl(c.costPerPurchase)}</td>
+      <td><span class="roas-pill ${roasCls}">${roasTxt}</span></td>
+    </tr>`;
+  });
+
+  // ── CHARTS ──
+  const top8spend = [...bySpend].slice(0,8);
+  new Chart(document.getElementById('spendChart'), {
+    type: 'bar',
+    data: {
+      labels: top8spend.map(c => c.shortName.substring(0,22)),
+      datasets: [{ data: top8spend.map(c => c.spend||0), backgroundColor: '#6366f1', borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip: { callbacks: { label: c => ' ' + brl(c.raw) } } },
+      scales: {
+        x: { ticks:{color:tc,font:{size:10}}, grid:{color:gc}, border:{display:false} },
+        y: { ticks:{color:tc,font:{size:10}}, grid:{display:false}, border:{display:false} }
+      }
+    }
+  });
+
+  if (byRoas.length) {
+    const top6roas = byRoas.slice(0,6);
+    new Chart(document.getElementById('roasChart'), {
+      type: 'bar',
+      data: {
+        labels: top6roas.map(c => c.shortName.substring(0,22)),
+        datasets: [{ data: top6roas.map(c => +(c.roas||0).toFixed(2)), backgroundColor: top6roas.map(c => c.roas>=5?'#22c55e':c.roas>=3?'#3b82f6':'#ef4444'), borderRadius: 5, borderSkipped: false }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip: { callbacks: { label: c => ' ROAS: ' + c.raw + '×' } } },
+        scales: {
+          x: { ticks:{color:tc,font:{size:10},callback:v=>v+'×'}, grid:{color:gc}, border:{display:false} },
+          y: { ticks:{color:tc,font:{size:10}}, grid:{display:false}, border:{display:false} }
+        }
+      }
+    });
+  }
+
+  const withRev = campaigns.filter(c => c.purchaseValue && c.spend).slice(0,6);
+  if (withRev.length) {
+    new Chart(document.getElementById('spendRevChart'), {
+      type: 'bar',
+      data: {
+        labels: withRev.map(c => c.shortName.substring(0,18)),
+        datasets: [
+          { label: 'Gasto', data: withRev.map(c=>c.spend||0), backgroundColor:'#6366f1', borderRadius:4, borderSkipped:false },
+          { label: 'Receita', data: withRev.map(c=>c.purchaseValue||0), backgroundColor:'#22c55e', borderRadius:4, borderSkipped:false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>' '+brl(c.raw)}} },
+        scales: {
+          x: { ticks:{color:tc,font:{size:10},maxRotation:35}, grid:{display:false}, border:{display:false} },
+          y: { ticks:{color:tc,font:{size:10},callback:v=>'R$'+v.toLocaleString('pt-BR')}, grid:{color:gc}, border:{display:false} }
+        }
+      }
+    });
+  }
+
+  const top5imp = [...bySpend].filter(c=>c.impressions).slice(0,5);
+  if (top5imp.length) {
+    new Chart(document.getElementById('impChart'), {
+      type: 'doughnut',
+      data: {
+        labels: top5imp.map(c=>c.shortName.substring(0,22)),
+        datasets: [{ data: top5imp.map(c=>c.impressions||0), backgroundColor: chartColors.slice(0,5), borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{position:'right',labels:{color:tc,font:{size:10},boxWidth:10,padding:8}}, tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' imp.'}} }
+      }
+    });
+  }
+}
+</script>
+</body>
+</html>
