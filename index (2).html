@@ -434,6 +434,10 @@
       <div class="report-sub" id="reportSub">—</div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" id="pdfBtn" onclick="exportPDF()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Exportar PDF
+      </button>
       <button class="btn" onclick="window.print()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Imprimir
@@ -823,6 +827,65 @@ function buildReport(rawData, fileName) {
         plugins: { legend:{position:'right',labels:{color:tc,font:{size:10},boxWidth:10,padding:8}}, tooltip:{callbacks:{label:c=>' '+fmt(c.raw)+' imp.'}} }
       }
     });
+  }
+}
+
+async function exportPDF() {
+  const btn = document.getElementById('pdfBtn');
+  const original = btn.innerHTML;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Gerando…';
+  btn.disabled = true;
+
+  try {
+    const el = document.getElementById('reportBody');
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#0d0d0f',
+      scrollY: -window.scrollY,
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight,
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const usableW = pageW - margin * 2;
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const imgH = (canvas.height * usableW) / canvas.width;
+
+    let yPos = margin;
+    let remaining = imgH;
+    let srcY = 0;
+
+    while (remaining > 0) {
+      const sliceH = Math.min(remaining, pageH - margin * 2);
+      const srcSliceH = (sliceH / imgH) * canvas.height;
+
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = srcSliceH;
+      sliceCanvas.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, srcSliceH, 0, 0, canvas.width, srcSliceH);
+
+      pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, yPos, usableW, sliceH);
+
+      remaining -= sliceH;
+      srcY += srcSliceH;
+
+      if (remaining > 0) { pdf.addPage(); yPos = margin; }
+    }
+
+    const title = document.getElementById('reportTitle').textContent.replace(/\.[^/.]+$/, '') || 'meta-ads-report';
+    pdf.save(title + '.pdf');
+  } catch (e) {
+    alert('Erro ao gerar PDF: ' + e.message);
+  } finally {
+    btn.innerHTML = original;
+    btn.disabled = false;
   }
 }
 </script>
